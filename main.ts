@@ -25,19 +25,42 @@ export default class GlobalHotkeysPlugin extends Plugin {
         return globalShortcut.register(accelerator, () => {
           const command = app.commands.commands[command_id];
           if (!command) return;
-          this.app.setting.close(); // Ensure all modals are closed?
+          this.app.setting.close();
           const win = remote.getCurrentWindow();
           const wasHidden = !win.isFocused() || !win.isVisible();
 
-          if (command.checkCallback)
-            command.checkCallback(false);
-          else if (command.callback)
-            command.callback();
-
-          // only activate Obsidian if visibility hasn't changed
+          // Only activate Obsidian if visibility hasn't changed
           const isHidden = !win.isFocused() || !win.isVisible();
-          if (wasHidden && isHidden)
-            remote.getCurrentWindow().show(); // Activate obsidian
+          if (wasHidden && isHidden) {
+            remote.getCurrentWindow().show(); // Activate Obsidian
+            remote.getCurrentWindow().maximize(); // Maximize Obsidian window
+
+            // Ensure that all modals are closed by pressing escape key
+            const escapeEvent = new KeyboardEvent("keydown", {
+              key: "Escape",
+              code: "Escape",
+              keyCode: 27,
+              bubbles: true,
+            });
+            document.dispatchEvent(escapeEvent);
+
+            if (command.checkCallback) command.checkCallback(false);
+            else if (command.callback) command.callback();
+          }
+
+          if (!isHidden) {
+            // Ensure that all modals are closed by pressing escape
+            const escapeEvent = new KeyboardEvent("keydown", {
+              key: "Escape",
+              code: "Escape",
+              keyCode: 27,
+              bubbles: true,
+            });
+            document.dispatchEvent(escapeEvent);
+
+            if (command.checkCallback) command.checkCallback(false);
+            else if (command.callback) command.callback();
+          }
         });
       } catch (error) {
         return false;
@@ -100,7 +123,7 @@ export default class GlobalHotkeysPlugin extends Plugin {
 
     await this.loadSettings();
 
-    globalShortcut.unregisterAll();
+    // globalShortcut.unregisterAll(); // This conflicts with other plugins that register global hotkeys such as Tray
     for (const cmd in this.settings.accelerators) {
       const a = this.settings.accelerators[cmd];
       if (a) {
